@@ -32,5 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CppProperties.json" />
+    <None Include="cpp.hint" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

@@ -6,13 +6,13 @@
 */
 int window_x = 1280;
 int window_y = 720;
-Genetics G{ window_x, window_y };
+Genetics G{ window_x, window_y, 25};
 
 //___________________________________________________
 /*
 * Function declarations
 */
-void initGFX(); // Initialize gfx before starting loop
+void initGFX();					// Initialize gfx before starting loop
 void loop();					// Function to use when displaying gfx in glut window
 void ChangeSize(int w, int h);	// for glutReshapeFunc
 
@@ -63,7 +63,7 @@ void initGFX() {
 }
 
 void loop() {
-	// Do next generation
+	// Do new/next generation
 	G.NewGeneration();
 
 	// Draw
