@@ -24,6 +24,7 @@
     <ProjectGuid>{25926C1D-B78C-4921-8B22-215E78A89092}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <ProjectName>Genetics_glut</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -107,6 +108,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>C:\dev\CPPLibraries\freeglutMSVC\include;C:\dev\CPPLibraries\GLEWbin\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\dev\CPPLibraries\freeglutMSVC\lib\x64;C:\dev\CPPLibraries\GLEWbin\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -115,11 +117,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Genetics.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="lib\Genetics.cpp" />
+    <ClCompile Include="lib\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Genetics.h" />
+    <ClInclude Include="lib\Genetics.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="README.txt" />
