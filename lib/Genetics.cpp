@@ -13,10 +13,8 @@ Genetics::Genetics() {
 	mMaxHeight = 720;
 	mDistToSide = 50.0;
 	mBestStartChromLength = 0;
+	mPrevGenBestChromLength = 0;
 	mUseMPC = true;
-	mFromId = 0;
-	mToId = 0;
-	mWidth = 0;
 	mGenId = 0;
 }
 
@@ -30,17 +28,22 @@ Genetics::Genetics(int w, int h, int d) {
 	mMaxHeight = h;
 	mDistToSide = d;
 	mBestStartChromLength = 0;
+	mPrevGenBestChromLength = 0;
 	mUseMPC = true;
-	mFromId = 0;
-	mToId = 0;
-	mWidth = 0;
 	mGenId = 0;
 }
+
+//Genetics::~Genetics() {
+//	delete[] mChromDistances;
+//	delete[] mGenePool;
+//	delete[] mIdxArr;
+//	delete[] mCityXY;
+//}
 
 /*
 * Public methods
 */
-void Genetics::InitCitiesXY() {
+bool Genetics::InitCitiesXY() {
 	For(i, M_CI) For(j, 2) {
 		double rand = 0.0;
 		if (j == 0) {				// if x value
@@ -51,9 +54,11 @@ void Genetics::InitCitiesXY() {
 		}
 		mCityXY[i][j] = rand;		// set x or y to random value
 	}
+
+	return true;
 }
 
-void Genetics::InitFirstGen() {
+bool Genetics::InitFirstGen() {
 	mTimeStart = std::chrono::high_resolution_clock::now();
 
 	For(i, M_CH) {					// 1.1 For all chromosomes
@@ -67,13 +72,29 @@ void Genetics::InitFirstGen() {
 	}
 
 	Genetics::EvalDistances();		// Evaluate all distances
+
+	return true;
 }
 
 void Genetics::NewGeneration() {
 	For(i, GFX_GENS_PER_FRAME) DoNextGen();
 }
 
-void Genetics::DrawCitiesPaths() {
+void Genetics::DrawCities() {
+	// Draw points for the generated cities
+	glColor3ub(55, 215, 55);
+	glBegin(GL_POINTS);		// Function for displaying glVertex2dv();
+	For(i, M_CI) {			// For all cities
+		double xyArr[2]{};
+		double* pArr{ mCityXY[i] };
+		xyArr[0] = *pArr; pArr++;
+		xyArr[1] = *pArr; pArr--;
+		glVertex2dv(xyArr); // Specify x,y for draw
+	}
+	glEnd();
+}
+
+void Genetics::DrawPaths() {
 	// Draw lines between cities from the chromosome with best fitness value
 	glColor3ub(15, 75, 175);
 	glBegin(GL_LINE_LOOP);			// Function for displaying glVertex2dv();
@@ -238,16 +259,12 @@ void Genetics::TransformChildren() {
 }
 
 void Genetics::DoNextGen() {
+	if (mGenId >= MAX_GEN) { mRunning = false; return; }	// when reaching max gen limit, stop
+	if (TIME_TO_SLEEP > 0) std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
+
 	// save current time
 	auto now = std::chrono::high_resolution_clock::now();
 	mCurrTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - mTimeStart); // store time every gen
-	
-	if (mGenId >= MAX_GEN) {  // when reaching max gen limit
-		mRunning = false;
-		return;				  // stop 
-	}
-
-	if (TIME_TO_SLEEP > 0) std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
 	
 	// Main Genetic Functions
 	ReshapeGenePool();				// Reshape the gene pool
@@ -260,15 +277,15 @@ void Genetics::DoNextGen() {
 
 void Genetics::MPC(int cId0, int cId1) {
 	if (!mUseMPC) return;
-	if (M_CH <= MPC_MIN_GENES) return;// prevent wrong mpc cutting if chrom 2 small
+	if (M_CH <= MPC_MIN_GENES) return;// prevent wrong mpc cutting if chrom too small
 
 	// 1. Set range for gene swapping
-	mWidth = M_CI / 2;				  // max allowable width = half a chrom
-	mFromId = randomInt(0, mWidth);	  // cut start index
-	mToId = mFromId + mWidth - 1;	  // cut end index
+	int width = M_CI / 2;				  // max allowable width = half a chrom
+	int fromId = randomInt(0, width);	  // cut start index
+	int toId = fromId + width - 1;	  // cut end index
 
 	// 2. For the genes in range, swap them
-	for(int i = mFromId; i <= mToId; i++){ 
+	for(int i = fromId; i <= toId; i++){
 		/*SwapInt(mGenePool[cId0][i], mGenePool[cId1][i]);*/
 		int tmp = mGenePool[cId1][i];
 		mGenePool[cId1][i] = mGenePool[cId0][i];
@@ -276,22 +293,20 @@ void Genetics::MPC(int cId0, int cId1) {
 	}
 
 	// 3. Repair the damaged genes(duplicate genes) || Repair the damaged chromosome
-	MPC_RepairChrom(cId0); MPC_RepairChrom(cId1);
+	MPC_RepairChrom(cId0, fromId, toId); MPC_RepairChrom(cId1, fromId, toId);
 }
 
-void Genetics::MPC_RepairChrom(int chromId) {
+void Genetics::MPC_RepairChrom(int chromId, int fromId, int toId) {
 	// Step 1: find duplicates
 	int duplicatesList[M_CI]{};
 	For(i, M_CI) duplicatesList[i] = -2;		// initiate with -2 since we don't consider negative
 	int numberOfDuplicatesN = 0;
-
-	// TODO; improve O(n)
 	for (int i = 0; i < M_CI; i++)				// for all genes
 	{
 		int cCh1 = mGenePool[chromId][i];		// gene to compare
 		int cCh2;								// second gene to compare
 
-		if (i >= mFromId && i <= mToId) {		// [0,from,to,0] if gene is affected by MPC 
+		if (i >= fromId && i <= toId) {			// [0,from,to,0] if gene is affected by MPC 
 			for (int j = i + 1; j < M_CI; j++)	// for all genes
 			{
 				cCh2 = mGenePool[chromId][j];
