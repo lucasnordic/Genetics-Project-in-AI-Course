@@ -178,11 +178,11 @@ bool Genetics::AreChromsEqual(int chromID0, int chromID1) {
 
 // TODO: Improve O(n); Ideas: use a map with struct{id,genes[],fitness}, sorted by fitness
 void Genetics::ReshapeGenePool() {
-	// 1.1 Sort indexes of chroms based on fitness; low -> high
+	// 1. Sort indexes of chroms based on fitness; low -> high
 	std::sort(mIdxArr, mIdxArr + M_CH, sort_indices_d(mChromDistances));  
 	if (mGenId == 0) mBestStartChromLength = mChromDistances[mIdxArr[0]]; // set best fitness at start
 	
-	// 1.2 Copy gene pool and distances arrays to keep original ordering
+	// 2. Copy gene pool and distances arrays to keep original ordering
 	double tempD[M_CH]{};
 	int prevGP[M_CH][M_CI]{};
 	for (int i = 0; i < M_CH; i++) {
@@ -193,27 +193,27 @@ void Genetics::ReshapeGenePool() {
 		}
 	}
 
-	// 1.3 Sort gene pool and distances by highest fitness ordering (stored in mIdxArr)
+	// 3. Sort gene pool and distances by highest fitness ordering (stored in mIdxArr)
 	//	   , in order to place parents(highest fitness) on top and children on bottom
-	std::unordered_multiset<double> searched = {};	// found fitness values
-	int idx = 0; int idx2 = (M_CH - 1);				// idx = 0,1...N-1; idx2 = N-1,N-2...0;
-	For(i, M_CH) {													// 1.3.1 for all genes, distances
-		int id = mIdxArr[i];						// id of fitness value
-		double d = tempD[id];						// save original distance
+	std::unordered_multiset<double> searched = {}; // found fitness values
+	int idx = 0; int idx2 = (M_CH - 1); // idx = (0)+; idx2 = (N-1)-;
+	For(i, M_CH) {													// 3.0 for all genes, distances
+		int id = mIdxArr[i]; // id of fit value
+		double d = tempD[id]; // original dist
 
-		auto search = searched.find(d);				// conditional iterator
-		if (search != searched.end()) {				// if fitness value already found
-			For(j, M_CI) SwapInt(mGenePool[idx2][j], prevGP[id][j]);// 1.3.2 swap genes
-			mChromDistances[idx2] = *search;						// 1.3.2 swap distances
+		auto search = searched.find(d);								// conditional iterator
+		if (search != searched.end()) {								// if fitness value already found
+			For(j, M_CI) SwapInt(mGenePool[idx2][j], prevGP[id][j]);// 3.1 swap genes
+			mChromDistances[idx2] = *search;						// 3.2 swap distances
 			if (idx2 >= 0) idx2--;
 		}
 		else {
-			For(j, M_CI) SwapInt(mGenePool[idx][j], prevGP[id][j]);	// 1.3.2 swap genes
-			mChromDistances[idx] = d;								// 1.3.1 swap distances
+			For(j, M_CI) SwapInt(mGenePool[idx][j], prevGP[id][j]);	// 3.1 swap genes
+			mChromDistances[idx] = d;								// 3.2 swap distances
 			if (idx < M_CH) idx++;
 		}
 
-		searched.insert(d);							// insert to list of searched dist
+		searched.insert(d);	// insert to list of searched dist
 	}
 }
 
