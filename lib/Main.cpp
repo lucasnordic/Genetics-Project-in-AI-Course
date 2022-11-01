@@ -134,6 +134,8 @@ void doGenetics() {
 		gArray.erase(0);	// erase old genetics
 		rightBtn = false;
 	}
+
+	delete pGen;
 }
 
 void specialKeys(int key, int x, int y) {

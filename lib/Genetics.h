@@ -23,8 +23,8 @@ class Genetics {
 	static const int MPCS_PER_MUT = 3;			// default 3   ;how many MPC's happen for each mutation
 	static const int MPC_MIN_GENES = 4;			// default 4   ;minimum allowed genes for MPC
 	static const int GFX_GENS_PER_FRAME = 2;	// default 1
-	static const int TIME_TO_SLEEP = 0;			// default 0   ;milliseconds ;slow down generation
 	static const int PARENTS = .5 * M_CH;		// default .5 * M_CH ;Percentage of parents
+	static const int TIME_TO_SLEEP = 0;			// default 0   ;milliseconds ;slow down generation
 	static const int INIT_MUTATIONS = M_CI*20;  // default M_CI*20 ;N mutations on initial pop
 public:
 	Genetics();

@@ -33,13 +33,6 @@ Genetics::Genetics(int w, int h, int d) {
 	mGenId = 0;
 }
 
-//Genetics::~Genetics() {
-//	delete[] mChromDistances;
-//	delete[] mGenePool;
-//	delete[] mIdxArr;
-//	delete[] mCityXY;
-//}
-
 /*
 * Public methods
 */
@@ -104,18 +97,6 @@ void Genetics::DrawPaths() {
 		xyArr[0] = *pArr; pArr++;
 		xyArr[1] = *pArr; pArr--;
 		glVertex2dv(xyArr);			// specify x,y for draw
-	}
-	glEnd();
-
-	// Draw points for the generated cities
-	glColor3ub(55, 215, 55);
-	glBegin(GL_POINTS);		// Function for displaying glVertex2dv();
-	For(i, M_CI) {			// For all cities
-		double xyArr[2]{};
-		double* pArr{ mCityXY[i] };
-		xyArr[0] = *pArr; pArr++;
-		xyArr[1] = *pArr; pArr--;
-		glVertex2dv(xyArr); // Specify x,y for draw
 	}
 	glEnd();
 }
