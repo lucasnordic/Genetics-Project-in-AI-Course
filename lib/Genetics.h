@@ -9,7 +9,9 @@
 #include <random>		// for uniform_x_distribution
 #include <algorithm>	// for sorting
 #include <unordered_set>
-#include <set>			
+#include <set>		
+#include <map>		
+#include <iomanip>		// for setprecision
 
 #include <GL/glut.h>
 
@@ -18,12 +20,12 @@
 
 class Genetics {
 	static const int M_CI = 20;					// default 20  ;> 3; MAX_CITIES
-	static const int M_CH = 100;				// default 100 ;MAX_CHROMOSOMES
-	static const int MAX_GEN = 1337;			// default 300
+	static const int M_CH = 100;					// default 100 ;MAX_CHROMOSOMES
+	static const int MAX_GEN = 13370;			// default 300
 	static const int MPCS_PER_MUT = 3;			// default 3   ;how many MPC's happen for each mutation
 	static const int MPC_MIN_GENES = 4;			// default 4   ;minimum allowed genes for MPC
 	static const int GFX_GENS_PER_FRAME = 2;	// default 1
-	static const int PARENTS = .5 * M_CH;		// default .5 * M_CH ;Percentage of parents
+	static const int PARENTS = .7 * M_CH;		// default .7 * M_CH ;Percentage of parents
 	static const int TIME_TO_SLEEP = 0;			// default 0   ;milliseconds ;slow down generation
 	static const int INIT_MUTATIONS = M_CI*20;  // default M_CI*20 ;N mutations on initial pop
 public:
@@ -43,6 +45,7 @@ public:
 	//___________________________________________________
 	double	(*mCityXY)[2];						// [MAX_CITIES][X/Y]
 	bool	mUseMPC;							// whether to use Multi Point Crossover
+	bool	mUseRoulette = false;				// use roulette wheel selection?
 	double	mBestStartChromLength;				// best chrom, at beginning; to eval algo success
 	double	mPrevGenBestChromLength;
 	int		mGenId;						
@@ -73,21 +76,32 @@ private:
 		std::uniform_int_distribution<T>    distr(range_from, range_to);
 		return								distr(generator);
 	}
+	//For generating rand double numb
+	template<typename T> T randomDouble(T range_from, T range_to) {
+		std::random_device                  rand_dev;
+		std::mt19937                        generator(rand_dev());
+		std::uniform_real_distribution<T>   distr(range_from, range_to);
+		return								distr(generator);
+	}
 	//___________________________________________________
 	int*	mIdxArr;					// stores INDEXES of mChromDistances, based on fitness score low -> high
 	//___________________________________________________
-	//		Helper methods
+	//		Helper functions
 	void	SwapInt(int& from, int& to);				// swap 2 int
 	bool	CheckChrom(int id);							// Helper function to check chrom health
 	//___________________________________________________
-	//		Gene methods
+	//		Gene functions
 	void	Mutate(int chromID);						// Mutate a Chromosome
 	void	EvalDistances();							// Evaluate goal function/distances
 	double	CalcTotalDistance(int chromID);				// FITNESS FUNCTION || GOAL FUNCTION || total distance
+	bool	AreChromsEqual(int chromID0, int chromID1);	// Check if chroms are equal;
+	//___________________________________________________
 	void	DoNextGen();								// Evaluate Next generation
 	void	ReshapeGenePool();							// Sort by fitness; Check for similar chroms
-	bool	AreChromsEqual(int chromID0, int chromID1);	// Check if chroms are equal;
+	//___________________________________________________
 	void	CopyParents();								// Create children from parents
+	void	RouletteSelection();						// Select parent by roulette wheel
+	//___________________________________________________
 	void	TransformChildren();						// Mutate and do MPC on children
 	void	MPC(int chromID0, int chromID1);			// Multi Point Crossover
 	void	MPC_RepairChrom(int chromId, int fromId, int toId);	// Repair the chrome after MPC
