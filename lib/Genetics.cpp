@@ -250,7 +250,7 @@ void Genetics::DoNextGen() {
 	// Main Genetic Functions
 	ReshapeGenePool();				// Reshape the gene pool
 	if (mChromDistances[0] < mPrevGenBestChromLength) mTimeEnd = mCurrTime; // store time until best chrom
-	CopyParents();					// clone chroms from parents to children
+	CopyParents();	
 	TransformChildren();			// Transform clones/children
 	EvalDistances();				// Re-evaluate distances/fitness values
 	mGenId++;						// increase generation

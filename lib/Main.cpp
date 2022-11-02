@@ -3,6 +3,7 @@
 #include <map>		// for Genetics
 #include <utility>
 #include <future>	// for async, future
+#include <chrono>	// for millisecond
 
 #include "Genetics.h"
 
@@ -134,8 +135,6 @@ void doGenetics() {
 		gArray.erase(0);	// erase old genetics
 		rightBtn = false;
 	}
-
-	delete pGen;
 }
 
 void specialKeys(int key, int x, int y) {
@@ -174,8 +173,8 @@ void drawGeneticsInfo() {
 		gen0.precision(9); gen0 << G.mGenId;
 		gen3.precision(9); gen3 << G.mChromDistances[0];
 		gen2.precision(4); gen2 << percentBetter << "%";
-		gen2.precision(9); gen4 << G.mCurrTime;
-		gen2.precision(9); gen8 << G.mTimeEnd;
+		gen2.precision(9); gen4 << G.mCurrTime.count();
+		gen2.precision(9); gen8 << G.mTimeEnd.count();
 		std::string running{}; if (G.mRunning) { running = "True"; } else { running = "False"; }
 		gen5 << running;
 
