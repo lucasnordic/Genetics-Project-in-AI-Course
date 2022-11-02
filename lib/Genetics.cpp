@@ -229,55 +229,6 @@ void Genetics::CopyParents() {
 	}
 }
 
-void Genetics::RouletteSelection() {
-	const int range = M_CH - Genetics::PARENTS;
-	int chosenParent{ 0 };
-	float rand, math0{0.};
-	int parent = -1;
-
-	// random distribution
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::exponential_distribution<> d(1);
-	std::map<int, int> hist;
-	for (int n = 0; n < range; ++n) {
-		++hist[2 * d(gen)];
-	}
-
-	int from = 0;
-	bool chosenP[PARENTS]{false};
-	for (auto p : hist) {	// for distribution
-		For(b, p.second) {							
-			int to = p.second + from;
-			if (p.second == 1) {
-				parent = math0 * from;
-				while (chosenP[parent]) {
-					if (parent > PARENTS) break;
-					parent++;
-				}
-			}
-			else {
-				int loops = 0;
-				do {
-					rand = randomDouble((double)from, (double)to);	// [0-5][6-10][11-15]...
-					math0 = (float)PARENTS / range;
-					parent = math0 * rand;
-					loops++;
-					if (parent > PARENTS) parent = PARENTS;
-					if (loops > 20) break;
-				} while (chosenP[parent]);
-				if (loops > 20) parent = 0;
-			}
-
-			chosenP[parent] = true;
-			For(i, M_CI) {							// For all child genes
-				mGenePool[PARENTS + from+b][i] = mGenePool[parent][i];	// Copy parent genes to child
-			}
-		}
-		from += p.second;
-	}
-}
-
 void Genetics::TransformChildren() {
 	for (int c = PARENTS; c < M_CH; c++) {				// 1. for all children
 		int rand = randomInt(0, GFX_GENS_PER_FRAME + 1);
@@ -299,8 +250,7 @@ void Genetics::DoNextGen() {
 	// Main Genetic Functions
 	ReshapeGenePool();				// Reshape the gene pool
 	if (mChromDistances[0] < mPrevGenBestChromLength) mTimeEnd = mCurrTime; // store time until best chrom
-	if (mUseRoulette) { RouletteSelection(); }
-	else			  { CopyParents(); }		
+	CopyParents();	
 	TransformChildren();			// Transform clones/children
 	EvalDistances();				// Re-evaluate distances/fitness values
 	mGenId++;						// increase generation

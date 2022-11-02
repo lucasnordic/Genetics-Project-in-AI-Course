@@ -100,7 +100,7 @@ private:
 	void	ReshapeGenePool();							// Sort by fitness; Check for similar chroms
 	//___________________________________________________
 	void	CopyParents();								// Create children from parents
-	void	RouletteSelection();						// Select parent by roulette wheel
+	//void	RouletteSelection();						// Select parent by roulette wheel
 	//___________________________________________________
 	void	TransformChildren();						// Mutate and do MPC on children
 	void	MPC(int chromID0, int chromID1);			// Multi Point Crossover
