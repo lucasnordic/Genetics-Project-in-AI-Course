@@ -20,14 +20,14 @@
 
 class Genetics {
 	static const int M_CI = 20;					// default 20  ;> 3; MAX_CITIES
-	static const int M_CH = 100;					// default 100 ;MAX_CHROMOSOMES
+	static const int M_CH = 300;				// default 100 ;MAX_CHROMOSOMES
 	static const int MAX_GEN = 13370;			// default 300
 	static const int MPCS_PER_MUT = 3;			// default 3   ;how many MPC's happen for each mutation
 	static const int MPC_MIN_GENES = 4;			// default 4   ;minimum allowed genes for MPC
 	static const int GFX_GENS_PER_FRAME = 2;	// default 1
 	static const int PARENTS = .7 * M_CH;		// default .7 * M_CH ;Percentage of parents
 	static const int TIME_TO_SLEEP = 0;			// default 0   ;milliseconds ;slow down generation
-	static const int INIT_MUTATIONS = M_CI*20;  // default M_CI*20 ;N mutations on initial pop
+	static const int INIT_MUTATIONS = M_CI*40;  // default M_CI*20 ;N mutations on initial pop
 public:
 	Genetics();
 	//~Genetics(); // TODO: Make memory leaks a thing of the past
@@ -74,13 +74,6 @@ private:
 		std::random_device                  rand_dev;
 		std::mt19937                        generator(rand_dev());
 		std::uniform_int_distribution<T>    distr(range_from, range_to);
-		return								distr(generator);
-	}
-	//For generating rand double numb
-	template<typename T> T randomDouble(T range_from, T range_to) {
-		std::random_device                  rand_dev;
-		std::mt19937                        generator(rand_dev());
-		std::uniform_real_distribution<T>   distr(range_from, range_to);
 		return								distr(generator);
 	}
 	//___________________________________________________
