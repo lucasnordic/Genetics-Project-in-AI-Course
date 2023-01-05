@@ -13,20 +13,19 @@
 /*
 * Variables, Structs...
 */
-int						window_x = 1280;	
-int						window_y = 920;					
-std::map <int,Genetics>	gArray{};					// array of Genetics
-bool					leftBtn, rightBtn, upBtn;	// user input
-std::future<bool>		a3;		// Async func for G.DrawCities()
-std::future<bool>		a4;		// Async func for G.DrawPaths()
+bool					leftBtn, rightBtn, upBtn, downBtn; // user input
+int						window_x = 1280;// 16:9
+int						window_y = 920;	// 720 == 16:9 == no bottom bar
+std::map <int,Genetics>	gArray{};		// array of a single Genetics
+std::future<bool>		a3;				// Async func for G.DrawCities()
+std::future<bool>		a4;				// Async func for G.DrawPaths()
 
-struct {
+struct {								
 	int					amountRuns = 0;
 	bool				testRun = true;
-	double				avPercImprov = 0;	// the average improvement o
-	int					(*initialGenePool)[10000];
+	double				avPercImprov = 0;
 	std::vector<double>	listOfPerc{};
-} runInfo;
+} runInfo;				// information of a test run of Genetics
 //___________________________________________________
 /*
 * Function declarations
@@ -72,7 +71,7 @@ int main(int argc, char **argv){
 
 //___________________________________________________
 /*
-* Functions
+* Main Functions
 */
 void changeSize(int w, int h) {
 	window_x = w; window_y = h;
@@ -97,7 +96,7 @@ void loop() {
 	bool arrEmpty;
 	Genetics* pGen;
 
-	doGenetics();						// Spawn new or remake(new/copy) Genetics 
+	doGenetics();						// 0. Spawn new or remake(new/copy) Genetics 
 
 	// Draw -----------------------------------------------------------
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -113,8 +112,6 @@ void loop() {
 		pGen = &gArray.find(0)->second;
 		pGen->NewGeneration();			// ------ Do new Gen ------
 		pGen->DrawPaths();				// 3. Draw - Paths
-
-		if (pGen->genId >= 300) leftBtn = true;
 	}
 
 	drawGeneticsInfo();					// 4. Draw - Current Genetics info
@@ -128,75 +125,85 @@ void doGenetics() {
 	Genetics* pGen;
 	bool arrEmpty = gArray.size() == 0;
 
-	if (arrEmpty) {					// 1. NEW GENETICS, NEW CITIES
-		gArray.emplace(0, Genetics(window_x, window_y - 200, 25));	// Construct new Genetics in array
-		pGen = &gArray.find(0)->second;								// Create a pointer to it
+	if (arrEmpty) {										// 1. NEW GENETICS, NEW CITIES
+		gArray.emplace(0, 
+			Genetics(window_x, window_y - 200, 25));	// Construct new Genetics in array
+		pGen = &gArray.find(0)->second;					// Create a pointer to it
 		
-		a3 = std::async([](Genetics* pGen) { 						// Async lambda, wait for InitCi...
+		a3 = std::async([](Genetics* pGen) { 			// Async lambda, wait for InitCi...
 			return pGen->InitCitiesXY(); }, pGen);
-		a4 = std::async([](Genetics* pGen) {						// Async lambda, wait for InitCi... complete
+		a4 = std::async([](Genetics* pGen) {			// Async lambda, wait for InitCi... complete
 			return pGen->InitPopulation(pGen->mch,true); }, pGen);
 
 		runInfo.amountRuns++;
+		runInfo.testRun = false;
 	} 
-	else if (!arrEmpty && leftBtn) { // 2. NEW GENETICS, COPY CITY
+	else if (!arrEmpty && leftBtn) {					// 2. NEW GENETICS, COPY CITY
 		// 2.1 keep old, erase old
-		O = gArray.find(0)->second;									// old genetics
-		gArray.erase(0);											// erase old genetics
+		O = gArray.find(0)->second;						// old genetics
+		gArray.erase(0);								// erase old genetics
 
 		// 2.2 Place new Genetics
 		gArray.emplace(0, Genetics(window_x, window_y - 200, 25));	
 		pGen = &gArray.find(0)->second;								
-		For(i, O.mci) For(j, 2) pGen->cityXY[i][j] = O.cityXY[i][j];// copy city x/y to new G
-		
-		For(i, pGen->mch) For(j, pGen->mci) pGen->genePool[i][j] = runInfo.initialGenePool[i][j];
-		//a4 = std::async([](Genetics* pGen) {						
-		//	return pGen->InitPopulation(pGen->mch, true);}, pGen);	
+		For(i, O.mci) For(j, 2) {
+			pGen->cityXY[i][j] = O.cityXY[i][j];		// copy city x/y to new G
+		}
 
-		// 2.3 calculate percentage improvement, add to list of percentages, calculate averages of runs
-		double percentBetter = 100 - (100 * O.chromDistances[0] / O.bestStartChromLength);
-		runInfo.listOfPerc.push_back(percentBetter);
-		int test = runInfo.listOfPerc.size();
-		if (test > 0) runInfo.avPercImprov = averageOfVect(runInfo.listOfPerc);
-		std::cout << std::to_string(runInfo.avPercImprov) << std::endl;
+		a4 = std::async([](Genetics* pGen) {						
+			return pGen->InitPopulation(pGen->mch, true);}, pGen);	
+
+		// 2.4 calculate percentage improvement, add to list of percentages, calculate averages of runs
+		if (runInfo.amountRuns > 0) {
+			double percentBetter = 100 - (100 * O.chromDistances[0] / O.bestStartChromLength);
+			runInfo.listOfPerc.push_back(percentBetter);
+			if (runInfo.listOfPerc.size() > 0) runInfo.avPercImprov = averageOfVect(runInfo.listOfPerc);
+		}
 
 		leftBtn = false;
 		runInfo.amountRuns++;
 	}
-	else if (!arrEmpty && rightBtn) { // 3. DELETE GENETICS AND CITIES
-		gArray.erase(0);			  // erase old genetics
+	else if (!arrEmpty && rightBtn && !runInfo.testRun) {// 3. DELETE GENETICS AND CITIES
+		gArray.erase(0);
 
 		rightBtn = false;
 		runInfo.amountRuns++;
 	}
-	else if (!arrEmpty && upBtn) {	  // 4. MUTATE POPULATION
+	else if (!arrEmpty && upBtn) {						// 4. MUTATE POPULATION
 		pGen = &gArray.find(0)->second;
 		int chroms = pGen->mch;
 
-		for (int i = 0; i < chroms; i++) {		    // for chroms
-			for (int j = 0; j < pGen->mci/4; j++) { // for half the amount of genes in chrom
+		for (int i = 0; i < chroms; i++) {				// for chroms
+			for (int j = 0; j < pGen->mci/4; j++) {		// for half the amount of genes in chrom
 				pGen->Mutate(i);				
 			}
 		}
 
 		upBtn = false;
 	}
+	else if (!arrEmpty && downBtn) {					// 5. Do test run 
+		// reset run info, set test run to true
+		runInfo.amountRuns = 0;		
+		runInfo.avPercImprov = 0.;	
+		runInfo.listOfPerc.clear();	
+		runInfo.testRun = true;
 
+		leftBtn = true;
+		downBtn = false;
+	}
 
-	if (a3._Is_ready()) test30Cities();				// Test preset city x/y;
-	if (a4._Is_ready() && runInfo.testRun) {// Save initial gene pool;
-		Genetics G = gArray.find(0)->second;
-		runInfo.initialGenePool = new int[10000][10000];
+	if (a4._Is_ready() && runInfo.testRun == true) {	// 5.1 Start new test
+		pGen = &gArray.find(0)->second;
+		if (pGen->genId >= pGen->maxGen) {leftBtn = true;}
 
-		For(i, G.mch) {
-			For(j, G.mci) {
-				runInfo.initialGenePool[i][j] = G.genePool[i][j];
-			}
-		}
-		runInfo.testRun = false;
+		test30Cities();	// Test preset city x/y;
 	}
 }
 
+//___________________________________________________
+/*
+* Functions
+*/
 void specialKeys(int key, int x, int y) {
 	bool a4Rdy = a4._Is_ready();
 
@@ -205,17 +212,21 @@ void specialKeys(int key, int x, int y) {
 	if		(key == GLUT_KEY_LEFT)	{ leftBtn = true; } 
 	else if (key == GLUT_KEY_RIGHT) { rightBtn = true; }
 	else if (key == GLUT_KEY_UP) { upBtn = true; }
+	else if (key == GLUT_KEY_DOWN) { 
+		if (!runInfo.testRun)downBtn = true;
+		runInfo.testRun = false; 
+	}
 }
 
 void drawGeneticsInfo() {
 	Genetics G;
-	std::ostringstream gen1; gen1 << "Best start fitness:    ";
-	std::ostringstream gen0; gen0 << "Generation:            ";
-	std::ostringstream gen3; gen3 << "Best current fitness:  ";
-	std::ostringstream gen2; gen2 << "% better than start:   ";
-	std::ostringstream gen4; gen4 << "Time alive:            ";
-	std::ostringstream gen8; gen8 << "Time until best chrom: ";
-	std::ostringstream gen5; gen5 << "Is active:             ";
+	std::ostringstream gen1; gen1	<< "Best start fitness:    ";
+	std::ostringstream gen0; gen0	<< "Generation:            ";
+	std::ostringstream gen3; gen3	<< "Best current fitness:  ";
+	std::ostringstream gen2; gen2	<< "% better than start:   ";
+	std::ostringstream gen4; gen4	<< "Time alive:            ";
+	std::ostringstream gen8; gen8	<< "Time until best chrom: ";
+	std::ostringstream gen5; gen5	<< "Average% and TestRuns: ";
 	bool arrEmpty = gArray.size() == 0;
 	int tlo = 50;	// text x offset
 	int tyo = -10;	// text y offset
@@ -236,8 +247,7 @@ void drawGeneticsInfo() {
 		gen2.precision(4); gen2 << percentBetter << "%";
 		gen2.precision(9); gen4 << G.timeCurr.count();
 		gen2.precision(9); gen8 << G.timeEnd.count();
-		std::string running{}; if (G.running) { running = "True"; } else { running = "False"; }
-		gen5 << running;
+		gen5.precision(4); gen5 << runInfo.avPercImprov << "%   Run: " << runInfo.amountRuns;
 
 		// Conditional color formatting
 		r = ((int)percentWorse) * 2.55;
@@ -257,9 +267,17 @@ void drawGeneticsInfo() {
 void drawOptionsInfoBar() {
 	int tlo = 50;  // text left offset on x
 	int tyo = -10; // text y offset
-	std::ostringstream gen6; gen6 << "left arrow  <-  ==  start a new population with the same city x/y";
-	std::ostringstream gen7; gen7 << "right arrow ->  ==  start a new population with new city x/y";
-	std::ostringstream gen8; gen8 << "up arrow        ==  chernobyl mode || mutate the population x times";
+	std::ostringstream gen6; gen6 << "left  arrow  <-  ==  start a new population with the same city x/y";
+	std::ostringstream gen7; gen7 << "right arrow  ->  ==  start a new population with new city x/y";
+	std::ostringstream gen8; gen8 << "up    arrow      ==  chernobyl mode || mutate the population x times";
+	std::ostringstream gen9; 
+	if (!gArray.empty()) {
+		gen9 << "down  arrow      ==  load 30 preset cities && restart after " 
+			<< gArray.find(0)->second.maxGen << " gen; !!M_CI == 30!!";
+	}
+	else {
+		gen9 << "down  arrow      ==  load 30 preset cities && restart after x gen; !!M_CI == 30!!";
+	}
 
 	// 1. Background
 	// Horizontal line
@@ -284,14 +302,19 @@ void drawOptionsInfoBar() {
 	drawText(((double)window_x / 3) + tlo, 760 + tyo, "KEYBOARD COMMANDS", 215, 215, 0);
 	drawText(((double)window_x / 3) + tlo, 790 + tyo, gen6.str(), 215, 215, 0);
 	drawText(((double)window_x / 3) + tlo, 810 + tyo, gen7.str(), 215, 215, 0);
-	drawText(((double)window_x / 3) + tlo, 830 + tyo, gen8.str(), 215, 215, 0);
+	drawText(((double)window_x / 3) + tlo, 830 + tyo, gen8.str(), 215, 115, 0);
+	drawText(((double)window_x / 3) + tlo, 850 + tyo, gen9.str(), 215, 115, 100);
 
 	// 3. Other info
 	if (gArray.empty() || !a4._Is_ready()) {
-		drawText(((double)window_x / 2) - 100, 
-			((double)window_y - 200) / 2, 
-			"GENERATING NEW POPULATION", 
-			215, 215, 0);
+		drawText(((double)window_x / 2) - 100, ((double)window_y - 200) / 2, 
+			"GENERATING NEW POPULATION", 215, 215, 0);
+	}
+	if (runInfo.testRun ) {
+		drawText(((double)window_x / 2) - 60,
+			((double)window_y - 240) / 2,
+			"TEST RUN ACTIVE",
+			215, 115, 100);
 	}
 }
 
@@ -303,9 +326,17 @@ void drawText(double x, double y, std::string text, int r, int g, int b) {
 	For(i, text.length()) glutBitmapCharacter(GLUT_BITMAP_8_BY_13, text[i]);
 }
 
+float averageOfVect(std::vector<double> const& v) {
+	if (v.empty()) {
+		return 0;
+	}
+
+	auto const count = static_cast<double>(v.size());
+	return std::reduce(v.begin(), v.end()) / count;
+}
+
 void test30Cities() {
 	Genetics *pGen = &gArray.find(0)->second;
-
 	pGen->cityXY [0][0] = {544.00000000000000};   pGen->cityXY[0][1] = {202.00000000000000};
 	pGen->cityXY [1][0] = {69.000000000000000};    pGen->cityXY[1][1] = { 625.00000000000000 };
 	pGen->cityXY [2][0] = { 666.00000000000000 };  pGen->cityXY[2][1] = { 36.000000000000000 };
@@ -336,14 +367,4 @@ void test30Cities() {
 	pGen->cityXY[27][0] = { 339.00000000000000 }; pGen->cityXY[27][1] = { 140.00000000000000 };
 	pGen->cityXY[28][0] = { 75.000000000000000 }; pGen->cityXY[28][1] = { 602.00000000000000 };
 	pGen->cityXY[29][0] = { 71.000000000000000 }; pGen->cityXY[29][1] = { 34.000000000000000 };
-
-}
-
-float averageOfVect(std::vector<double> const& v) {
-	if (v.empty()) {
-		return 0;
-	}
-
-	auto const count = static_cast<double>(v.size());
-	return std::reduce(v.begin(), v.end()) / count;
 }

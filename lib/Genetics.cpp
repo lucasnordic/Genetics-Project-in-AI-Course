@@ -55,22 +55,38 @@ bool Genetics::InitPopulation(int amountChrom, bool newPop) {
 	mTimeStart = std::chrono::high_resolution_clock::now();
 
 	For(i, amountChrom) {					// 1.1 For all chromosomes
-		For(j, M_CI) {				// 1.2 For their genes
-			genePool[i][j] = j;		// 2.1 Initialize the gene pool with {0,1...N-1}
+		For(j, M_CI) {						// 1.2 For their genes
+			genePool[i][j] = j;				// 2.1 Initialize the gene pool with {0,1...N-1}
 		}
 
-		For(j, INIT_MUTATIONS) Mutate(i); // 2.2 mutate chromosomes
+		For(j, INIT_MUTATIONS) Mutate(i);	// 2.2 mutate chromosomes
 
-		if(newPop) mIdxArr[i] = i;	// Initialize with {0,1...N-1}
+		if(newPop) mIdxArr[i] = i;			// Initialize with {0,1...N-1}
 	}
 
-	Genetics::EvalDistances(amountChrom);		// Evaluate all distances
+	Genetics::EvalDistances(amountChrom);	// Evaluate all distances
 
 	return true;
 }
 
 void Genetics::NewGeneration() {
-	For(i, GFX_GENS_PER_FRAME) DoNextGen();
+	For(i, GFX_GENS_PER_FRAME) {
+		if (genId >= MAX_GEN) { running = false; return; }	// when reaching max gen limit, stop
+		if (TIME_TO_SLEEP > 0) std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
+
+		// save current time
+		auto now = std::chrono::high_resolution_clock::now();
+		timeCurr = std::chrono::duration_cast<std::chrono::milliseconds>(now - mTimeStart); // store time every gen
+
+		// Main Genetic Functions
+		ReshapeGenePool();				// Reshape the gene pool
+		if (chromDistances[0] < prevGenBestChromLength) timeEnd = timeCurr; // store time until best chrom
+		CopyParents();
+		TransformChildren();			// Transform clones/children
+
+		EvalDistances(M_CH);			// Re-evaluate distances/fitness values
+		genId++;						// increase generation
+	}
 }
 
 void Genetics::DrawCities() {
@@ -142,13 +158,13 @@ void Genetics::EvalDistances(int amountChrom) {
 	double l{0.0};									// lowest fitness value
 	prevGenBestChromLength = chromDistances[0];
 
-	For(i, amountChrom) {									// For all Chromosomes
+	For(i, amountChrom) {							// For all Chromosomes
 		chromDistances[i] = CalcTotalDistance(i);	// Calculate fitness value
 
 		if (chromDistances[i] < l || l == 0.0) l = chromDistances[i];
 	}
 
-	if (genId == 0) { bestStartChromLength = l; }		// store best initial chrom fitness
+	if (genId == 0) { bestStartChromLength = l; }	// store best initial chrom fitness
 }
 
 double Genetics::CalcTotalDistance(int chromID) {
@@ -178,7 +194,6 @@ bool Genetics::AreChromsEqual(int chromID0, int chromID1) {
 	return true;
 }
 
-// TODO: Improve O(n); Ideas: use a map with struct{id,genes[],fitness}, sorted by fitness
 void Genetics::ReshapeGenePool() {
 	// 1. Sort indexes of chroms based on fitness; low -> high
 	std::sort(mIdxArr, mIdxArr + M_CH, sort_indices_d(chromDistances));  
@@ -205,8 +220,8 @@ void Genetics::ReshapeGenePool() {
 
 		auto search = searched.find(d);								// conditional iterator
 		if (search != searched.end()) {								// if fitness value already found
-			For(j, M_CI) SwapInt(genePool[idx2][j], prevGP[id][j]);// 3.1 swap genes
-			chromDistances[idx2] = *search;						// 3.2 swap distances
+			For(j, M_CI) SwapInt(genePool[idx2][j], prevGP[id][j]);	// 3.1 swap genes
+			chromDistances[idx2] = *search;							// 3.2 swap distances
 			if (idx2 >= 0) idx2--;
 		}
 		else {
@@ -233,40 +248,22 @@ void Genetics::CopyParents() {
 
 void Genetics::TransformChildren() {
 	for (int c = PARENTS; c < M_CH; c++) {				// 1. for all children
-		int rand = randomInt(0, GFX_GENS_PER_FRAME + 1);
+		int rand = randomInt(0, MPCS_PER_MUT + 1);      // if (1 in MPCS_PER_MUT...) 
 
-		if (rand == 0) { Mutate(c); }					// 2.1 if (1 in GFX_GE...) Mutate()
+		if (rand == 0) { For(i, CHILD_MUT) Mutate(c); }	// 2.1 Mutate()
 		else if (c != M_CH - 1) { MPC(c, c + 1); }		// 2.2 else do MPC() on two children
-		else { For(i, CHILD_MUT) Mutate(c); }					// 2.3 if last index, simply Mutate()
+		else { For(i, CHILD_MUT) Mutate(c); }			// 2.3 if last index, simply Mutate()
 	}
-}
-
-void Genetics::DoNextGen() {
-	if (genId >= MAX_GEN) { running = false; return; }	// when reaching max gen limit, stop
-	if (TIME_TO_SLEEP > 0) std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
-
-	// save current time
-	auto now = std::chrono::high_resolution_clock::now();
-	timeCurr = std::chrono::duration_cast<std::chrono::milliseconds>(now - mTimeStart); // store time every gen
-	
-	// Main Genetic Functions
-	ReshapeGenePool();				// Reshape the gene pool
-	if (chromDistances[0] < prevGenBestChromLength) timeEnd = timeCurr; // store time until best chrom
-	CopyParents();	
-	TransformChildren();			// Transform clones/children
-
-	EvalDistances(M_CH);			// Re-evaluate distances/fitness values
-	genId++;						// increase generation
 }
 
 void Genetics::MPC(int cId0, int cId1) {
 	if (!useMPC) return;
-	if (M_CH <= MPC_MIN_GENES) return;// prevent wrong mpc cutting if chrom too small
+	if (M_CH <= MPC_MIN_GENES) return;	// prevent wrong mpc cutting if chrom too small
 
 	// 1. Set range for gene swapping
-	int width = M_CI / 2;				  // max allowable width = half a chrom
-	int fromId = randomInt(0, width);	  // cut start index
-	int toId = fromId + width - 1;	  // cut end index
+	int width = M_CI / 2;				// max allowable width = half a chrom
+	int fromId = randomInt(0, width);	// cut start index
+	int toId = fromId + width - 1;		// cut end index
 
 	// 2. For the genes in range, swap them
 	for(int i = fromId; i <= toId; i++){
